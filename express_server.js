@@ -65,7 +65,9 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const userId = req.cookies["user_id"]
+  const templateVars = { user: userId };
+  res.render("urls_new", templateVars);
 });
 
 app.post("/urls", (req, res) => {
@@ -105,10 +107,16 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 })
 
-app.post ("/login", (req, res) => {
-  const username = req.body.username
-    console.log(username)
-  res.cookie("username", username)
+app.post("/login", (req, res) => {
+  const password = req.body.password
+  const email = req.body.email
+  if(!password || !email) return res.status(403).send('Please put valid email and password');
+
+  const userObject = findUserByEmail(email, users)
+  if(!userObject || userObject.email !== email || userObject.password !== password) {
+    return res.status(403).send('Wrong credentials')
+  }
+  res.cookie("user_id", userObject.id)
   res.redirect("/urls")
 })
 
@@ -118,18 +126,48 @@ app.post ("/logout", (req, res) => {
 })
 
 app.post ("/register", (req, res) => { // make a post for the registration, this is creating a new user
-  
-  console.log(req.body) // printing out the form input field that has email and pw (navigates to localhost:8080/register)
-  const newUser = {       //  holds the new user info
-    id: generateRandomString(), 
-    email: req.body.email,
-    password: req.body.password
+  const userEmail = req.body.email
+  const password = req.body.password
+  if (!userEmail || !password) {
+    res.status(403).send("Sorry cannot be empty"); 
   } 
-  users[newUser.id] = newUser // stores the new user info in the user database
-  res.cookie("user_id", newUser.id) // saves the new used id in the browser cookie
-  console.log(users) // prints out all the users info
-  res.redirect("/urls") // redirects it to the url page, (makes a get request to /urls)
+  const userFound = findUserByEmail(userEmail, users)
+  console.log('USERFOUND---->',userFound)
+  if(userFound) return res.status(403).send('Email is taken')
+
+  const newUserId = generateRandomString()
+  const newUser = {       //  holds the new user info
+    id: newUserId, 
+    email: userEmail,
+    password: password
+  } 
+
+  users[newUserId] = newUser
+
+  res.cookie('user_id', newUserId)
+  res.redirect("/urls")
 })
+
+app.get ("/login", (req, res) => {
+  const userId = req.cookies["user_id"]
+  const templateVars = { urls: urlDatabase, user: users[userId],  }
+  res.render("login", templateVars)
+
+})
+
+function findUserByEmail(userEmail, users) {
+  for(const user in users) {
+    if(users[user].email == userEmail) return users[user]
+  }
+  return false
+}
+
+//   }
+//   users[newUser.id] = newUser // stores the new user info in the user database
+//   res.cookie("user_id", newUser.id) // saves the new used id in the browser cookie
+//   console.log(users) // prints out all the users info
+//   res.redirect("/urls") // redirects it to the url page, (makes a get request to /urls)
+// })
 
 
 
