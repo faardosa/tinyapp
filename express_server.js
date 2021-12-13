@@ -1,3 +1,4 @@
+const bcrypt = require('bcryptjs');
 const express = require("express");
 const cookieParser = require('cookie-parser')
 const app = express();
@@ -6,16 +7,16 @@ const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser())
 
-// const bcrypt = require('bcryptjs');
-// const password = "purple-monkey-dinosaur"; // found in the req.params object
-// const hashedPassword = bcrypt.hashSync(password, 10);
+
+ const password = "purple-monkey-dinosaur"; // found in the req.params object
+ const hashedPassword = bcrypt.hashSync(password, 10);
 
 
 const users = { 
   "userRandomID": {
     id: "userRandomID", 
     email: "user@example.com", 
-    password: "purple-monkey-dinosaur"
+    password: bcrypt.hashSync("purple-monkey-dinosaur", 10) 
   },
  "user2RandomID": {
     id: "user2RandomID", 
@@ -229,7 +230,7 @@ app.post("/login", (req, res) => {
   if(!password || !email) return res.status(403).send('Please put valid email and password');
 
   const userObject = findUserByEmail(email, users)
-  if(!userObject || userObject.email !== email || userObject.password !== password) {
+  if(!userObject || userObject.email !== email || bcrypt.compareSync(password, userObject.password)) {
     return res.status(403).send('Wrong credentials')
   }
   res.cookie("user_id", userObject.id)
@@ -255,7 +256,7 @@ app.post ("/register", (req, res) => { // make a post for the registration, this
   const newUser = {       //  holds the new user info
     id: newUserId, 
     email: userEmail,
-    password: password
+    password: bcrypt.hashSync(password, 10)
   } 
 
   users[newUserId] = newUser
